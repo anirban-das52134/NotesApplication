@@ -1,4 +1,4 @@
-package com.example.notesapplication;
+package com.example.notesapplication.UIActivities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
+
+import com.example.notesapplication.R;
 
 public class MainActivity extends AppCompatActivity {
 
