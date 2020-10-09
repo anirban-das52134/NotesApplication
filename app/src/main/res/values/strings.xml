@@ -7,4 +7,9 @@
     <string name="options">Options</string>
     <string name="pick_color">Pick Color</string>
     <string name="note_title_hint">Note Title</string>
+    <string name="add_image">Add image</string>
+    <string name="add_url">Add URL</string>
+    <string name="enter_url">Enter URL</string>
+    <string name="add_url_btn_text">ADD</string>
+    <string name="cancel_url_btn_text">CANCEL</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.example.notesapplication.adapters;
 
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
@@ -13,15 +14,20 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.notesapplication.entities.Note;
 import com.example.notesapplication.R;
+import com.example.notesapplication.listeners.NotesListener;
+import com.makeramen.roundedimageview.RoundedImageView;
 
 import java.util.List;
 
 public class NotesAdapter extends  RecyclerView.Adapter<NotesAdapter.NoteViewHolder>{
 
     private List<Note> notes;
+    private NotesListener notesListener;
 
-    public NotesAdapter(List<Note> notes) {
+    public NotesAdapter(List<Note> notes, NotesListener notesListener) {
+
         this.notes = notes;
+        this.notesListener = notesListener;
     }
 
     @NonNull
@@ -37,8 +43,14 @@ public class NotesAdapter extends  RecyclerView.Adapter<NotesAdapter.NoteViewHol
     }
 
     @Override
-    public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull NoteViewHolder holder, final int position) {
         holder.setNote(notes.get(position));
+        holder.noteLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                notesListener.onNoteClicked(notes.get(position),position);
+            }
+        });
     }
 
     @Override
@@ -54,6 +66,7 @@ public class NotesAdapter extends  RecyclerView.Adapter<NotesAdapter.NoteViewHol
     static class NoteViewHolder extends RecyclerView.ViewHolder {
         TextView textTitle,textSubtitle,textDateTime;
         LinearLayout noteLayout;
+        RoundedImageView thumbnailImage;
 
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -61,6 +74,7 @@ public class NotesAdapter extends  RecyclerView.Adapter<NotesAdapter.NoteViewHol
             textSubtitle = itemView.findViewById(R.id.textSubtitle);
             textDateTime = itemView.findViewById(R.id.textDateTime);
             noteLayout = itemView.findViewById(R.id.layoutNote);
+            thumbnailImage = itemView.findViewById(R.id.thumbnailImage);
         }
 
         void setNote(Note note){
@@ -80,6 +94,14 @@ public class NotesAdapter extends  RecyclerView.Adapter<NotesAdapter.NoteViewHol
             }
             else {
                 gradientDrawable.setColor(Color.parseColor("#333333")); //Default Note color
+            }
+
+            if(note.getImagePath() != null){
+                thumbnailImage.setImageBitmap(BitmapFactory.decodeFile(note.getImagePath()));
+                thumbnailImage.setVisibility(View.VISIBLE);
+            }
+            else {
+                thumbnailImage.setVisibility(View.GONE);
             }
         }
     }
