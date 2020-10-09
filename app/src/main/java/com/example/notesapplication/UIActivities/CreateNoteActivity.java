@@ -1,14 +1,30 @@
 package com.example.notesapplication.UIActivities;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.util.Patterns;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -20,7 +36,9 @@ import com.example.notesapplication.database.NotesDatabase;
 import com.example.notesapplication.entities.Note;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
 
@@ -30,12 +48,21 @@ public class CreateNoteActivity extends AppCompatActivity {
     private TextView dateTime;
     private View subtitleIndicator;
     private ImageView[] colorStatusImageView;
+    private ImageView imageNote;
+    private TextView textURL;
+    private LinearLayout layoutURL;
+
 
     private String selectedColor;
     private String[] availableColors = new String[]{"#333333","#FDBE3B","#FF4842","#3A52Fc","#FFFFFF"};
+    private String selectedImagePath;
 
-    public CreateNoteActivity() {
-    }
+    private static final int REQUEST_STORAGE_PERMISSION_CODE = 1;
+    private static final int REQUEST_SELECT_IMAGE_CODE = 2;
+
+    private AlertDialog dialogURL;
+
+    private Note alreadyAvailableNote;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,19 +71,27 @@ public class CreateNoteActivity extends AppCompatActivity {
 
         //region Note Properties
         colorStatusImageView = new ImageView[5];
-        selectedColor = availableColors[0];
         noteTitle = findViewById(R.id.noteTitle);
         noteSubtitle = findViewById(R.id.noteSubtitle);
         noteText = findViewById(R.id.inputNote);
         dateTime = findViewById(R.id.dateTime);
         subtitleIndicator = findViewById(R.id.viewSubtitleIndicator);
+        imageNote = findViewById(R.id.imageNote);
+        textURL = findViewById(R.id.textURL);
+        layoutURL = findViewById(R.id.layoutURL);
 
+        selectedColor = availableColors[0];
+        selectedImagePath = "";
         dateTime.setText(
                 new SimpleDateFormat("EEEE, dd MMMM yyyy HH:MM a", Locale.getDefault())
                         .format(new Date()));
 
-        initOptions();
-        setSubtitleIndicatorColor();//Default note color
+        Intent intent = getIntent();
+        if(intent.getBooleanExtra("isViewOrUpdate", false)){
+            alreadyAvailableNote = (Note) intent.getSerializableExtra("note");
+            setViewOrUpdateNote();
+        }
+
         //endregion
 
         //region Button Functionality
@@ -78,6 +113,27 @@ public class CreateNoteActivity extends AppCompatActivity {
             }
         });
         //endregion
+
+        initOptions();
+        setSubtitleIndicatorColor();//Default note color
+    }
+
+    void setViewOrUpdateNote(){
+       noteTitle.setText(alreadyAvailableNote.getTitle());
+       noteSubtitle.setText(alreadyAvailableNote.getSubtitle());
+       noteText.setText(alreadyAvailableNote.getNoteText());
+       dateTime.setText(alreadyAvailableNote.getDateTime());
+
+       if(alreadyAvailableNote.getImagePath() != null && !alreadyAvailableNote.getImagePath().trim().isEmpty()){
+           selectedImagePath = alreadyAvailableNote.getImagePath();
+           imageNote.setImageBitmap(BitmapFactory.decodeFile(selectedImagePath));
+           imageNote.setVisibility(View.VISIBLE);
+       }
+
+       if(alreadyAvailableNote.getWebLink() != null && !alreadyAvailableNote.getWebLink().trim().isEmpty()){
+           textURL.setText(alreadyAvailableNote.getWebLink());
+           layoutURL.setVisibility(View.VISIBLE);
+       }
     }
 
     private void saveNote(){
@@ -96,6 +152,15 @@ public class CreateNoteActivity extends AppCompatActivity {
         note.setNoteText(noteText.getText().toString());
         note.setDateTime(dateTime.getText().toString());
         note.setColor(selectedColor);
+        note.setImagePath(selectedImagePath);
+
+        if(layoutURL.getVisibility() == View.VISIBLE){
+            note.setWebLink(textURL.getText().toString().trim());
+        }
+
+        if(alreadyAvailableNote != null){
+            note.setId(alreadyAvailableNote.getId());
+        }
 
         //Using Async Task to save the note into database
         @SuppressLint("StaticFieldLeak")
@@ -171,9 +236,42 @@ public class CreateNoteActivity extends AppCompatActivity {
                 setColorChosen(4);
             }
         });
+
+        if(alreadyAvailableNote != null && alreadyAvailableNote.getColor()!=null && !alreadyAvailableNote.getColor().trim().isEmpty()){
+            String color = alreadyAvailableNote.getColor();
+            int index = Arrays.asList(availableColors).indexOf(color);
+            setColorChosen(index);
+        }
+
+        optionsLayout.findViewById(R.id.optionsAddImage).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                if((ContextCompat.checkSelfPermission( getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE))
+                        != PackageManager.PERMISSION_GRANTED){
+                    ActivityCompat.requestPermissions(
+                            CreateNoteActivity.this,
+                            new String[] {Manifest.permission.READ_EXTERNAL_STORAGE},
+                            REQUEST_STORAGE_PERMISSION_CODE
+                    );
+                }
+                else {
+                    selectImage();
+                }
+            }
+        });
+
+        optionsLayout.findViewById(R.id.optionsAddURL).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                showAddURLDialogue();
+            }
+        });
     }
 
     void setColorChosen(int index){
+        if(index < 0) index = 0;
         selectedColor = availableColors[index];
         for(int i = 0;i<colorStatusImageView.length;i++){
             if(i == index) colorStatusImageView[i].setImageResource(R.drawable.ic_done);
@@ -185,5 +283,110 @@ public class CreateNoteActivity extends AppCompatActivity {
     void setSubtitleIndicatorColor(){
         GradientDrawable gradientDrawable = (GradientDrawable) subtitleIndicator.getBackground();
         gradientDrawable.setColor(Color.parseColor(selectedColor));
+    }
+
+    void selectImage(){
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        if((intent.resolveActivity(getPackageManager()) != null)){
+            startActivityForResult(intent,REQUEST_SELECT_IMAGE_CODE);
+        }
+    }
+
+    String getPathFromUri(Uri contentUri){
+        String filePath;
+        Cursor cursor = getContentResolver().query(contentUri,null,null,null,null);
+
+        if(cursor == null){
+            filePath = contentUri.getPath();
+        }
+        else {
+            cursor.moveToFirst();
+            int index = cursor.getColumnIndex("_data");
+            filePath = cursor.getString(index);
+            cursor.close();
+        }
+        return filePath;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == REQUEST_STORAGE_PERMISSION_CODE && grantResults.length > 0){
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                selectImage();
+            }
+            else {
+                Toast.makeText(this,"Permission denied!",Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == REQUEST_SELECT_IMAGE_CODE && resultCode == RESULT_OK){
+            if(data!=null){
+                Uri selectedImageUri = data.getData();
+                if(selectedImageUri != null){
+                    try {
+                        InputStream is = getContentResolver().openInputStream(selectedImageUri);
+                        Bitmap bmp = BitmapFactory.decodeStream(is);
+                        imageNote.setImageBitmap(bmp);
+                        imageNote.setVisibility(View.VISIBLE);
+
+                        selectedImagePath = getPathFromUri(selectedImageUri);
+                    }
+                    catch (Exception e){
+                        Toast.makeText(this,e.getMessage(),Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        }
+    }
+
+    void showAddURLDialogue(){
+        if(dialogURL == null){
+            AlertDialog.Builder builder = new AlertDialog.Builder(CreateNoteActivity.this);
+            View view = LayoutInflater.from(this).inflate(
+                    R.layout.layout_add_url,
+                    (ViewGroup) findViewById(R.id.layoutAddUrl_parent)
+            );
+            builder.setView(view);
+
+            dialogURL = builder.create();
+
+            if(dialogURL.getWindow() !=null){
+                dialogURL.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+            }
+
+            final EditText inputURL = view.findViewById(R.id.inputURL);
+            inputURL.requestFocus();
+
+            view.findViewById(R.id.addURLBtn).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String str = inputURL.getText().toString().trim();
+                    if(str.isEmpty()){
+                        Toast.makeText(CreateNoteActivity.this,"Enter URL",Toast.LENGTH_SHORT).show();
+                    }
+                    else if(!Patterns.WEB_URL.matcher(str).matches()){
+                        Toast.makeText(CreateNoteActivity.this,"Enter valid URL",Toast.LENGTH_SHORT).show();
+                    }
+                    else {
+                        textURL.setText(str);
+                        layoutURL.setVisibility(View.VISIBLE);
+                        dialogURL.dismiss();
+                    }
+                }
+            });
+
+            view.findViewById(R.id.cancelURLBtn).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                   dialogURL.dismiss();
+                }
+            });
+        }
+        dialogURL.show();
     }
 }
