@@ -13,10 +13,14 @@
     <color name="colorDefaultNoteColor">#333333</color>
     <color name="colorNoteSubtitleText">#FAFAFA</color>
     <color name="colorOptionsBackground">#1F1F1F</color>
-    <color name="colorNoteColor2">#FDBE3B</color>
-    <color name="colorNoteColor3">#FF4842</color>
-    <color name="colorNoteColor4">#3A52Fc</color>
-    <color name="colorNoteColor5">#FFFFFF</color>
+
+<!--    Note Background Colors-->
+    <color name="colorNoteColor1">#324851</color>
+    <color name="colorNoteColor2">#375E97</color>
+    <color name="colorNoteColor3">#FB6542</color>
+    <color name="colorNoteColor4">#DB9501</color>
+    <color name="colorNoteColor5">#3F681C</color>
+
     <color name="colorDelete">#FF4842</color>
     <color name="colorSearchBackgrund">#333333</color>
 </resources>

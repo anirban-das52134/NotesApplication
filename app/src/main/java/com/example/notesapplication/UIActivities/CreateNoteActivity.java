@@ -34,11 +34,13 @@ import android.widget.Toast;
 import com.example.notesapplication.R;
 import com.example.notesapplication.database.NotesDatabase;
 import com.example.notesapplication.entities.Note;
+import com.example.notesapplication.utilities.Utils;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -54,7 +56,7 @@ public class CreateNoteActivity extends AppCompatActivity {
 
 
     private String selectedColor;
-    private String[] availableColors = new String[]{"#333333","#FDBE3B","#FF4842","#3A52Fc","#FFFFFF"};
+    private final String[] availableColors = new String[]{"#324851","#375E97","#FB6542","#DB9501","#3F681C"};
     private String selectedImagePath;
 
     private static final int REQUEST_STORAGE_PERMISSION_CODE = 1;
@@ -82,9 +84,9 @@ public class CreateNoteActivity extends AppCompatActivity {
 
         selectedColor = availableColors[0];
         selectedImagePath = "";
-        dateTime.setText(
-                new SimpleDateFormat("EEEE, dd MMMM yyyy HH:MM a", Locale.getDefault())
-                        .format(new Date()));
+
+        //Get Current Time
+        dateTime.setText(Utils.getCurrentDateTime());
 
         Intent intent = getIntent();
         if(intent.getBooleanExtra("isViewOrUpdate", false)){
@@ -112,6 +114,24 @@ public class CreateNoteActivity extends AppCompatActivity {
                 saveNote();
             }
         });
+
+        findViewById(R.id.removeWebURL).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                textURL.setText(null);
+                layoutURL.setVisibility(View.GONE);
+            }
+        });
+
+        findViewById(R.id.removeImage).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                imageNote.setImageBitmap(null);
+                imageNote.setVisibility(View.GONE);
+                findViewById(R.id.removeImage).setVisibility(View.GONE);
+                selectedImagePath = "";
+            }
+        });
         //endregion
 
         initOptions();
@@ -128,6 +148,7 @@ public class CreateNoteActivity extends AppCompatActivity {
            selectedImagePath = alreadyAvailableNote.getImagePath();
            imageNote.setImageBitmap(BitmapFactory.decodeFile(selectedImagePath));
            imageNote.setVisibility(View.VISIBLE);
+           findViewById(R.id.removeImage).setVisibility(View.VISIBLE);
        }
 
        if(alreadyAvailableNote.getWebLink() != null && !alreadyAvailableNote.getWebLink().trim().isEmpty()){
@@ -150,7 +171,7 @@ public class CreateNoteActivity extends AppCompatActivity {
         note.setTitle(noteTitle.getText().toString());
         note.setSubtitle(noteSubtitle.getText().toString());
         note.setNoteText(noteText.getText().toString());
-        note.setDateTime(dateTime.getText().toString());
+        note.setDateTime(Utils.getCurrentDateTime());
         note.setColor(selectedColor);
         note.setImagePath(selectedImagePath);
 
@@ -333,6 +354,7 @@ public class CreateNoteActivity extends AppCompatActivity {
                         Bitmap bmp = BitmapFactory.decodeStream(is);
                         imageNote.setImageBitmap(bmp);
                         imageNote.setVisibility(View.VISIBLE);
+                        findViewById(R.id.removeImage).setVisibility(View.VISIBLE);
 
                         selectedImagePath = getPathFromUri(selectedImageUri);
                     }
