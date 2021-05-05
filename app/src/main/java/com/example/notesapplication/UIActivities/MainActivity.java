@@ -9,7 +9,11 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
+import android.view.WindowManager;
+import android.widget.EditText;
 import android.widget.ImageView;
 
 import com.example.notesapplication.R;
@@ -33,11 +37,15 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
     private NotesAdapter notesAdapter;
 
     private int noteClickedPosition = -1;
+    private String searchText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 
         ImageView addNoteMain = findViewById(R.id.addNoteMain);
         addNoteMain.setOnClickListener(new View.OnClickListener() {
@@ -60,6 +68,27 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
         notesRecyclerView.setAdapter(notesAdapter);
 
         getNotes(REQUEST_CODE_SHOW_ALL_NOTES,false);
+
+        EditText inputSearch = findViewById(R.id.inputSearch);
+        inputSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                notesAdapter.cancelTimer();
+                searchText = charSequence.toString();
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                if(noteList.size()!=0){
+                    notesAdapter.searchNote(editable.toString());
+                }
+            }
+        });
     }
 
     @Override
@@ -95,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements NotesListener {
                     notesRecyclerView.smoothScrollToPosition(0);
                 }
                 else if(requestCode == REQUEST_CODE_UPDATE_NOTE){
+                    notesAdapter.searchNote(searchText);
                     noteList.remove(noteClickedPosition);
                     if(isNoteDeleted){
                         notesAdapter.notifyItemRemoved(noteClickedPosition);
